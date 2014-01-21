@@ -35,7 +35,9 @@ module LibertyBuildpack::Container
     # @option context [String] :lib_directory the directory that additional libraries are placed in
     # @option context [Hash] :configuration the properties provided by the user
     def initialize(context)
+      @logger = LibertyBuildpack::Diagnostics::LoggerFactory.get_logger
       @app_dir = context[:app_dir]
+      prep_app(@app_dir)
       @java_home = context[:java_home]
       @java_opts = context[:java_opts]
       @lib_directory = context[:lib_directory]
@@ -45,7 +47,15 @@ module LibertyBuildpack::Container
       @vcap_application = context[:vcap_application]
       @license_id = context[:license_ids]['IBM_LIBERTY_LICENSE']
       @environment = context[:environment]
-      @logger = LibertyBuildpack::Diagnostics::LoggerFactory.get_logger
+      @apps = apps
+    end
+
+    # Extracts archives that are pushed initially
+    def prep_app(app_dir)
+      ['*.zip', '*.ear'].each do |archive|
+        app = Liberty.contains_type(app_dir, archive)
+        Liberty.splat_expand(app) if app
+      end
     end
 
     # Get a list of web applications that are in the server directory
@@ -56,8 +66,12 @@ module LibertyBuildpack::Container
       server_xml = Liberty.server_xml(@app_dir)
       if Liberty.web_inf(@app_dir)
         apps_found = [@app_dir]
+      elsif Liberty.meta_inf(@app_dir)
+        apps_found = [@app_dir]
+        wars = Dir.glob(File.expand_path(File.join(@app_dir, '*.war')))
+        Liberty.expand_apps(wars)
       elsif server_xml
-        apps_found = Dir.glob(File.expand_path(File.join(server_xml, '..', '**', '*.war')))
+        ['*.war', '*.ear'].each { |suffix| apps_found += Dir.glob(File.expand_path(File.join(server_xml, '..', '**', suffix))) }
         Liberty.expand_apps(apps_found)
       end
       apps_found
@@ -128,8 +142,6 @@ module LibertyBuildpack::Container
         end
 
         minified_zip = File.join(root, 'minified.zip')
-        make_server_script_runnable
-        @logger.info('server executable permissions changed')
         minify_script_string = "JAVA_HOME=\"#{@app_dir}/#{@java_home}\" #{File.join(liberty_home, 'bin', 'server')} package #{server_name} --include=minify --archive=#{minified_zip} --os=-z/OS"
         # Make it quiet unless there're errors (redirect only stdout)
         minify_script_string << ContainerUtils.space('1>/dev/null')
@@ -138,13 +150,15 @@ module LibertyBuildpack::Container
 
         # Update with minified version only if the generated file exists and not empty.
         if File.size? minified_zip
-          @logger.info('Start minifying')
+          @logger.info('Started minify')
           system("unzip -qq -d #{root} #{minified_zip}")
-          system("rm -rf #{liberty_home} && mv #{root}/wlp #{liberty_home}")
+          system("rm -rf #{liberty_home}/lib && mv #{root}/wlp/lib #{liberty_home}/lib")
+          system("rm -rf #{root}/wlp")
+          @logger.info("#{Dir.glob("#{root}/wlp/**/")}")
           # Re-create sym-links for application and libraries.
-          link_application
+          make_server_script_runnable
+          @logger.info('Finished minify')
           puts 'Using minified liberty.'
-          @logger.info('minify finished')
         else
           puts 'Minification failed. Continue using the full liberty.'
         end
@@ -179,6 +193,8 @@ module LibertyBuildpack::Container
 
     WEB_INF = 'WEB-INF'.freeze
 
+    META_INF = 'META-INF'.freeze
+
     def update_server_xml
       server_xml = Liberty.server_xml(@app_dir)
       if server_xml
@@ -186,28 +202,45 @@ module LibertyBuildpack::Container
         server_xml_doc.context[:attribute_quote] = :quote
 
         endpoints = REXML::XPath.match(server_xml_doc, '/server/httpEndpoint')
-
-        if endpoints.empty?
-          endpoint = REXML::Element.new('httpEndpoint', server_xml_doc.root)
-        else
-          endpoint = endpoints[0]
-          endpoints.drop(1).each { |element| element.parent.delete_element(element) }
-        end
-        endpoint.add_attribute('host', '*')
-        endpoint.add_attribute('httpPort', "${#{KEY_HTTP_PORT}}")
-        endpoint.delete_attribute('httpsPort')
+        modify_endpoints(endpoints, server_xml_doc)
 
         include_file = REXML::Element.new('include', server_xml_doc.root)
         include_file.add_attribute('location', 'runtime-vars.xml')
 
         File.open(server_xml, 'w') { |file| server_xml_doc.write(file) }
       elsif Liberty.web_inf(@app_dir)
-        FileUtils.mkdir_p(File.join(@app_dir, '.liberty', 'usr', 'servers', 'defaultServer'))
-        resources = File.expand_path(RESOURCES, File.dirname(__FILE__))
-        FileUtils.cp(File.join(resources, 'server.xml'), default_server_path)
+        create_server_xml
+      elsif Liberty.meta_inf(@app_dir)
+        server_xml = create_server_xml
+        server_xml_doc = File.open(server_xml, 'r') { |file| REXML::Document.new(file) }
+        application = REXML::XPath.match(server_xml_doc, '/server/application')[0]
+        application.attributes['type'] = 'ear'
+        File.open(server_xml, 'w') { |file| server_xml_doc.write(file) }
       else
-        raise 'Neither a server.xml or WEB-INF directory was found.'
+        raise 'Neither a server.xml nor WEB-INF directory nor a ear was found.'
       end
+    end
+
+    def modify_endpoints(endpoints, server_xml_doc)
+      if endpoints.empty?
+        endpoint = REXML::Element.new('httpEndpoint', server_xml_doc.root)
+      else
+        endpoint = endpoints[0]
+        endpoints.drop(1).each { |element| element.parent.delete_element(element) }
+      end
+        endpoint.add_attribute('host', '*')
+        endpoint.add_attribute('httpPort', "${#{KEY_HTTP_PORT}}")
+        endpoint.delete_attribute('httpsPort')
+    end
+
+    # Copies the template server xml into the server directory structure and prepares it
+    def create_server_xml
+      server_xml_dir = File.join(@app_dir, '.liberty', 'usr', 'servers', 'defaultServer')
+      server_xml = File.join(server_xml_dir, 'server.xml')
+      FileUtils.mkdir_p(server_xml_dir)
+      resources = File.expand_path(RESOURCES, File.dirname(__FILE__))
+      FileUtils.cp(File.join(resources, 'server.xml'), default_server_path)
+      server_xml
     end
 
     def make_server_script_runnable
@@ -223,6 +256,8 @@ module LibertyBuildpack::Container
       elsif Liberty.server_directory @app_dir
         return 'defaultServer'
       elsif Liberty.web_inf @app_dir
+        return 'defaultServer'
+      elsif Liberty.meta_inf(@app_dir)
         return 'defaultServer'
       else
         raise 'Could not find either a WEB-INF directory or a server.xml.'
@@ -258,6 +293,10 @@ module LibertyBuildpack::Container
           fail "Malformed Liberty version #{candidate_version}: too many version components" if candidate_version[4]
         end
       elsif web_inf(app_dir)
+        version, uri, license = LibertyBuildpack::Repository::ConfiguredItem.find_item(configuration) do |candidate_version|
+          fail "Malformed Liberty version #{candidate_version}: too many version components" if candidate_version[4]
+        end
+      elsif meta_inf(app_dir)
         version, uri, license = LibertyBuildpack::Repository::ConfiguredItem.find_item(configuration) do |candidate_version|
           fail "Malformed Liberty version #{candidate_version}: too many version components" if candidate_version[4]
         end
@@ -319,9 +358,18 @@ module LibertyBuildpack::Container
       File.join app_dir, 'WEB-INF', 'lib'
     end
 
+    def self.ear_lib(app_dir)
+      File.join app_dir, 'lib'
+    end
+
     def self.web_inf(app_dir)
       web_inf = File.join(app_dir, WEB_INF)
       File.directory?(File.join(app_dir, WEB_INF)) ? web_inf : nil
+    end
+
+    def self.meta_inf(app_dir)
+      meta_inf = File.join(app_dir, META_INF)
+      File.directory?(File.join(app_dir, META_INF)) ? meta_inf : nil
     end
 
     def self.server_directory(server_dir)
@@ -335,6 +383,15 @@ module LibertyBuildpack::Container
         raise "Incorrect number of servers to deploy (expecting exactly one): #{candidates}"
       end
       candidates.any? ? candidates[0] : nil
+    end
+
+    def self.contains_type(app_dir, type)
+      files = Dir.glob(File.join(app_dir, type))
+      files == [] || files == nil ? nil : files
+    end
+
+    def self.ear?(app)
+      app.include? '.ear'
     end
 
     def self.server_xml(app_dir)
@@ -356,6 +413,23 @@ module LibertyBuildpack::Container
           File.rename(temp_directory, app)
         end
       end
+    end
+
+    def self.splat_expand(apps)
+      apps.each do |app|
+        if File.file? app
+          system("unzip -oxq '#{app}' -d ./app")
+          FileUtils.rm_rf("#{app}")
+        end
+      end
+    end
+
+    def self.all_extracted?(file_array)
+      state = true
+      file_array.each do |file|
+          state = false if File.file?(file)
+      end
+      state
     end
 
   end
