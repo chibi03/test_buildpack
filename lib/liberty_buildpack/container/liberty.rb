@@ -45,6 +45,7 @@ module LibertyBuildpack::Container
       @vcap_application = context[:vcap_application]
       @license_id = context[:license_ids]['IBM_LIBERTY_LICENSE']
       @environment = context[:environment]
+      @logger = LibertyBuildpack::Diagnostics::LoggerFactory.get_logger
     end
 
     # Get a list of web applications that are in the server directory
@@ -83,7 +84,6 @@ module LibertyBuildpack::Container
       download_liberty
       update_server_xml
       link_application
-      link_libs
       make_server_script_runnable
       # Need to do minify here to have server_xml updated and applications and libs linked.
       minify_liberty if minify?
@@ -127,8 +127,9 @@ module LibertyBuildpack::Container
           file.puts('<server></server>')
         end
 
-        make_server_script_runnable
         minified_zip = File.join(root, 'minified.zip')
+        make_server_script_runnable
+        @logger.info('server executable permissions changed')
         minify_script_string = "JAVA_HOME=\"#{@app_dir}/#{@java_home}\" #{File.join(liberty_home, 'bin', 'server')} package #{server_name} --include=minify --archive=#{minified_zip} --os=-z/OS"
         # Make it quiet unless there're errors (redirect only stdout)
         minify_script_string << ContainerUtils.space('1>/dev/null')
@@ -137,12 +138,13 @@ module LibertyBuildpack::Container
 
         # Update with minified version only if the generated file exists and not empty.
         if File.size? minified_zip
+          @logger.info('Start minifying')
           system("unzip -qq -d #{root} #{minified_zip}")
           system("rm -rf #{liberty_home} && mv #{root}/wlp #{liberty_home}")
           # Re-create sym-links for application and libraries.
           link_application
-          link_libs
           puts 'Using minified liberty.'
+          @logger.info('minify finished')
         else
           puts 'Minification failed. Continue using the full liberty.'
         end
@@ -285,21 +287,6 @@ module LibertyBuildpack::Container
         default_server_pathname = Pathname.new(default_server_path)
         Pathname.glob(File.join(@app_dir, '*')) do |file|
           FileUtils.ln_sf(file.relative_path_from(default_server_pathname), default_server_path)
-        end
-      end
-    end
-
-    def link_libs
-      apps.each do |app_dir|
-        libs = ContainerUtils.libs(app_dir, @lib_directory)
-
-        if libs
-          app_web_inf_lib = Liberty.web_inf_lib(app_dir)
-          FileUtils.mkdir_p(app_web_inf_lib) unless File.exists?(app_web_inf_lib)
-          app_web_inf_lib_path = Pathname.new(app_web_inf_lib)
-          Pathname.glob(File.join(@lib_directory, '*.jar')) do |jar|
-            FileUtils.ln_sf(jar.relative_path_from(app_web_inf_lib_path), app_web_inf_lib)
-          end
         end
       end
     end
