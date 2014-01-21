@@ -127,6 +127,7 @@ module LibertyBuildpack::Container
           file.puts('<server></server>')
         end
 
+        make_server_script_runnable
         minified_zip = File.join(root, 'minified.zip')
         minify_script_string = "JAVA_HOME=\"#{@app_dir}/#{@java_home}\" #{File.join(liberty_home, 'bin', 'server')} package #{server_name} --include=minify --archive=#{minified_zip} --os=-z/OS"
         # Make it quiet unless there're errors (redirect only stdout)
@@ -141,7 +142,6 @@ module LibertyBuildpack::Container
           # Re-create sym-links for application and libraries.
           link_application
           link_libs
-          make_server_script_runnable
           puts 'Using minified liberty.'
         else
           puts 'Minification failed. Continue using the full liberty.'
