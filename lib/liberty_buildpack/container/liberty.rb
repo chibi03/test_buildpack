@@ -142,7 +142,7 @@ module LibertyBuildpack::Container
         end
 
         @logger.info('Run minify script')
-        @logger.info("#{system("ls -l #{liberty_home}/**")}")
+        @logger.info("#{system("ls -l #{liberty_home}/bin/**")}")
         minified_zip = File.join(root, 'minified.zip')
         minify_script_string = "JAVA_HOME=\"#{@app_dir}/#{@java_home}\" #{File.join(liberty_home, 'bin', 'server')} package #{server_name} --include=minify --archive=#{minified_zip} --os=-z/OS"
         # Make it quiet unless there're errors (redirect only stdout)
