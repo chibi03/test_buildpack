@@ -93,13 +93,13 @@ module LibertyBuildpack::Container
         print "\nYou have not accepted the IBM Liberty License.\n\nVisit the following uri:\n#{@liberty_license}\n\nExtract the license number (D/N:) and place it inside your manifest file as a ENV property e.g. \nENV: \n  IBM_LIBERTY_LICENSE: {License Number}.\n"
         raise
       end
-
+      @logger.info("#{system("ls -l #{@app_dir}/**")}")
       jvm_options
       download_liberty
       update_server_xml
       link_application
-      @logger.info("#{system("ls -l #{liberty_home}/**/*")}")
-      make_server_script_runnable
+      @logger.info("#{system("ls -l #{File.join(@app_dir, 'wlp', 'usr')}/**")}")
+      make_server_script_
       # Need to do minify here to have server_xml updated and applications and libs linked.
       minify_liberty if minify?
       set_liberty_system_properties
