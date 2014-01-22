@@ -154,6 +154,7 @@ module LibertyBuildpack::Container
           system("unzip -qq -d #{root} #{minified_zip}")
           system("rm -rf #{liberty_home}/lib && mv #{root}/wlp/lib #{liberty_home}/lib")
           system("rm -rf #{root}/wlp")
+          @logger.info("#{system("ls -l #{liberty_home}/**")}")
           @logger.info("#{Dir.glob("#{root}/wlp/**/")}")
           # Re-create sym-links for application and libraries.
           make_server_script_runnable
