@@ -142,8 +142,7 @@ module LibertyBuildpack::Container
           file.puts('<server></server>')
         end
 
-        @logger.info('Run minify script')
-        @logger.info("#{system("ls -l #{liberty_home}/bin/**")}")
+        @logger.info("Run minify script #{system("ls -l #{liberty_home}/bin/**")}")
         minified_zip = File.join(root, 'minified.zip')
         minify_script_string = "JAVA_HOME=\"#{@app_dir}/#{@java_home}\" #{File.join(liberty_home, 'bin', 'server')} package #{server_name} --include=minify --archive=#{minified_zip} --os=-z/OS"
         # Make it quiet unless there're errors (redirect only stdout)
@@ -154,7 +153,6 @@ module LibertyBuildpack::Container
 
         # Update with minified version only if the generated file exists and not empty.
         if File.size? minified_zip
-          @logger.info('Started minify')
           system("unzip -qq -d #{root} #{minified_zip}")
           system("rm -rf #{liberty_home}/lib && mv #{root}/wlp/lib #{liberty_home}/lib")
           system("rm -rf #{root}/wlp")
@@ -162,7 +160,6 @@ module LibertyBuildpack::Container
           @logger.info("#{Dir.glob("#{root}/wlp/**/")}")
           # Re-create sym-links for application and libraries.
           make_server_script_runnable
-          @logger.info('Finished minify')
           puts 'Using minified liberty.'
         else
           puts 'Minification failed. Continue using the full liberty.'
