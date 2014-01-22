@@ -99,7 +99,7 @@ module LibertyBuildpack::Container
       update_server_xml
       link_application
       @logger.info("#{system("ls -l #{File.join(@app_dir, 'wlp', 'usr')}/**")}")
-      make_server_script_
+      make_server_script_runnable
       # Need to do minify here to have server_xml updated and applications and libs linked.
       minify_liberty if minify?
       set_liberty_system_properties
