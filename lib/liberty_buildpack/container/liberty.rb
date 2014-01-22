@@ -141,12 +141,14 @@ module LibertyBuildpack::Container
           file.puts('<server></server>')
         end
 
+        @logger.info("Run minify script")
         minified_zip = File.join(root, 'minified.zip')
         minify_script_string = "JAVA_HOME=\"#{@app_dir}/#{@java_home}\" #{File.join(liberty_home, 'bin', 'server')} package #{server_name} --include=minify --archive=#{minified_zip} --os=-z/OS"
         # Make it quiet unless there're errors (redirect only stdout)
         minify_script_string << ContainerUtils.space('1>/dev/null')
 
         system(minify_script_string)
+        @logger.info("The size of the minified zip is #{File.size? minified_zip}")
 
         # Update with minified version only if the generated file exists and not empty.
         if File.size? minified_zip
