@@ -3,5 +3,6 @@ language: ruby
 rvm:
   - 1.9.3
 notifications:
+  email: false
   webhooks: http://ec2-54-229-6-54.eu-west-1.compute.amazonaws.com/projects/b7a8069c-f991-409e-8953-1b4365824fec/status
 script: bundle exec rake
