@@ -225,6 +225,7 @@ module LibertyBuildpack::Container
           application.attributes['type'] = 'ear'
         end
         File.open(server_xml, 'w') { |file| server_xml_doc.write(file) }
+        @logger.info(server_xml)
       else
         raise 'Neither a server.xml nor WEB-INF directory nor a ear was found.'
       end
