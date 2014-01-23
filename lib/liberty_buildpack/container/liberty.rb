@@ -67,12 +67,10 @@ module LibertyBuildpack::Container
       if Liberty.web_inf(@app_dir)
         apps_found = [@app_dir]
       elsif Liberty.app_mf(@app_dir)
-        @logger.info('EBA found')
         apps_found = [@app_dir]
       elsif Liberty.meta_inf(@app_dir)
-        @logger.info('EAR found')
         apps_found = [@app_dir]
-        ['*.war', '*.ear'].each { |suffix| exp_app += Dir.glob(File.expand_path(File.join(@app_dir, suffix))) }
+        ['*.war', '*.ear'].each { |suffix| exp_app += Dir.glob(File.expand_path(File.join(@app_dir, suffix))) } # rubocop:disable UselessAssignment
         Liberty.expand_apps(exp_app)
       elsif server_xml
         ['*.war', '*.ear', '*.eba'].each { |suffix| apps_found += Dir.glob(File.expand_path(File.join(server_xml, '..', '**', suffix))) }
@@ -229,7 +227,7 @@ module LibertyBuildpack::Container
       end
     end
 
-     def add_feature(server_xml_doc)
+    def add_feature(server_xml_doc)
       feature_manager = REXML::XPath.match(server_xml_doc, '/server/featureManager')[0]
       feature = REXML::Element.new('feature')
       feature.add_text('wab-1.0')
