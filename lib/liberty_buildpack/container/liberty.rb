@@ -64,8 +64,6 @@ module LibertyBuildpack::Container
     def apps
       apps_found = []
       server_xml = Liberty.server_xml(@app_dir)
-      @logger.info("Contents of Directory #{Dir.glob("#{@app_dir}/META-INF/**")}")
-      @logger.info("#{Liberty.app_mf(@app_dir)}")
       if Liberty.web_inf(@app_dir)
         apps_found = [@app_dir]
       elsif Liberty.app_mf(@app_dir)
@@ -221,7 +219,7 @@ module LibertyBuildpack::Container
 
         if Liberty.app_mf(@app_dir)
           featureManager = REXML::XPath.match(server_xml_doc, '/server/featureManager')[0]
-         feature = Element.new('feature')
+          feature = REXML::Element.new('feature')
           feature.add_text('wab-1.0')
           featureManager.add(feature)
           application.attributes['type'] = 'eba'
@@ -376,7 +374,6 @@ module LibertyBuildpack::Container
 
     def self.app_mf(app_dir)
       app_mf = File.join(app_dir, META_INF, APPLICATION_MF)
-      LibertyBuildpack::Diagnostics::LoggerFactory.get_logger.info("#{app_mf}")
       File.file?(File.join(app_dir, META_INF, APPLICATION_MF)) ? app_mf : nil
     end
 
