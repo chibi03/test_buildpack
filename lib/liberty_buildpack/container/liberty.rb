@@ -68,12 +68,8 @@ module LibertyBuildpack::Container
         apps_found = [@app_dir]
       elsif Liberty.meta_inf(@app_dir)
         apps_found = [@app_dir]
-        ['*.war', '*.ear'].each do |suffix|
-          tmp = Dir.glob(File.expand_path(File.join(@app_dir, suffix))) # rubocop:disable all
-          exp_app += tmp unless tmp == nil
-          @logger.info("#{exp_app}")
-        end
-        Liberty.expand_apps(exp_app)
+        wars = Dir.glob(File.expand_path(File.join(@app_dir, '*.war')))
+        Liberty.expand_apps(wars)
       elsif server_xml
         ['*.war', '*.ear', '*.eba'].each { |suffix| apps_found += Dir.glob(File.expand_path(File.join(server_xml, '..', '**', suffix))) }
         Liberty.expand_apps(apps_found)
