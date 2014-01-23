@@ -67,8 +67,10 @@ module LibertyBuildpack::Container
       if Liberty.web_inf(@app_dir)
         apps_found = [@app_dir]
       elsif Liberty.application_mf(@app_dir)
+        @logger.info('EBA found')
         apps_found = [@app_dir]
       elsif Liberty.meta_inf(@app_dir)
+        @logger.info('EAR found')
         apps_found = [@app_dir]
         ['*.war', '*.ear'].each { |suffix| exp_app += Dir.glob(File.expand_path(File.join(@app_dir, suffix))) }
         Liberty.expand_apps(exp_app)
