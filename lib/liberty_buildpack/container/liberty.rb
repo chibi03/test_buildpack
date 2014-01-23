@@ -217,7 +217,7 @@ module LibertyBuildpack::Container
 
         if Liberty.application_mf(@app_dir)
           featureManager = REXML::XPath.match(server_xml_doc, '/server/featureManager')[0]
-          feature = Element.new('feature')
+         feature = Element.new('feature')
           feature.add_text('wab-1.0')
           featureManager.add(feature)
           application.attributes['type'] = 'eba'
@@ -371,8 +371,8 @@ module LibertyBuildpack::Container
     end
 
     def self.application_mf(app_dir)
-      app_mf = File.join(meta_inf, APPLICATION_MF)
-      File.file?(File.join(meta_inf, APPLICATION_MF)) ? app_mf : nil
+      app_mf = File.join(meta_inf(app_dir), APPLICATION_MF)
+      File.file?(File.join(meta_inf(app_dir), APPLICATION_MF)) ? app_mf : nil
     end
 
     def self.server_directory(server_dir)
