@@ -72,7 +72,7 @@ module LibertyBuildpack::Framework
     # @param [String] app_dir the directory containing archives
     # @param [String] pattern the pattern that should be matched
     # @return [boolean]
-     def self.application_within_archive?(app_dir, pattern)
+    def self.application_within_archive?(app_dir, pattern)
       list = ''
       archives = Dir.glob(File.join(app_dir, '**', '*.jar'))
       archives.each do |file|
