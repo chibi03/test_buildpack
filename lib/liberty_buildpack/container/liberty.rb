@@ -376,7 +376,7 @@ module LibertyBuildpack::Container
 
     def self.application_mf(app_dir)
       application_mf = File.join(app_dir, META_INF, APPLICATION_MF)
-      File.directory?(File.join(app_dir, META_INF, APPLICATION_MF)) ? application_mf : nil
+      File.file?(File.join(app_dir, META_INF, APPLICATION_MF)) ? application_mf : nil
     end
 
     def self.server_directory(server_dir)
