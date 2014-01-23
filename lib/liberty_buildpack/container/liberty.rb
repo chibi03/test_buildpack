@@ -64,9 +64,7 @@ module LibertyBuildpack::Container
     def apps
       apps_found = []
       server_xml = Liberty.server_xml(@app_dir)
-      if Liberty.web_inf(@app_dir)
-        apps_found = [@app_dir]
-      elsif Liberty.app_mf(@app_dir)
+      if Liberty.web_inf(@app_dir) || Liberty.app_mf(@app_dir)
         apps_found = [@app_dir]
       elsif Liberty.meta_inf(@app_dir)
         apps_found = [@app_dir]
