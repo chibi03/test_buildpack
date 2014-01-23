@@ -197,7 +197,7 @@ module LibertyBuildpack::Container
 
     META_INF = 'META-INF'.freeze
 
-    APPLICATION_MF = 'Application.mf'.freeze
+    APPLICATION_MF = 'APPLICATION.MF'.freeze
 
     def update_server_xml
       server_xml = Liberty.server_xml(@app_dir)
