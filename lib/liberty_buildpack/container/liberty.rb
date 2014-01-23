@@ -218,19 +218,22 @@ module LibertyBuildpack::Container
         application = REXML::XPath.match(server_xml_doc, '/server/application')[0]
 
         if Liberty.app_mf(@app_dir)
-          featureManager = REXML::XPath.match(server_xml_doc, '/server/featureManager')[0]
-          feature = REXML::Element.new('feature')
-          feature.add_text('wab-1.0')
-          featureManager.add(feature)
+          add_feature(server_xml_doc)
           application.attributes['type'] = 'eba'
         else
           application.attributes['type'] = 'ear'
         end
         File.open(server_xml, 'w') { |file| server_xml_doc.write(file) }
-        @logger.info(server_xml_doc)
       else
         raise 'Neither a server.xml nor WEB-INF directory nor a ear was found.'
       end
+    end
+
+     def add_feature(server_xml_doc)
+      feature_manager = REXML::XPath.match(server_xml_doc, '/server/featureManager')[0]
+      feature = REXML::Element.new('feature')
+      feature.add_text('wab-1.0')
+      feature_manager.add(feature)
     end
 
     def modify_endpoints(endpoints, server_xml_doc)
@@ -296,7 +299,7 @@ module LibertyBuildpack::Container
     end
 
     def self.find_liberty(app_dir, configuration)
-      if server_xml(app_dir) || web_inf(app_dir)|| app_mf(app_dir) || meta_inf(app_dir)
+      if server_xml(app_dir) || web_inf(app_dir) || app_mf(app_dir) || meta_inf(app_dir)
         version, uri, license = LibertyBuildpack::Repository::ConfiguredItem.find_item(configuration) do |candidate_version|
           fail "Malformed Liberty version #{candidate_version}: too many version components" if candidate_version[4]
         end
