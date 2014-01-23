@@ -65,10 +65,10 @@ module LibertyBuildpack::Container
       apps_found = []
       server_xml = Liberty.server_xml(@app_dir)
       @logger.info("Contents of Directory #{Dir.glob("#{@app_dir}/**")}")
-      @logger.info("#{Liberty.application_mf(@app_dir)}")
+      @logger.info("#{Liberty.app_mf(@app_dir)}")
       if Liberty.web_inf(@app_dir)
         apps_found = [@app_dir]
-      elsif Liberty.application_mf(@app_dir)
+      elsif Liberty.app_mf(@app_dir)
         @logger.info('EBA found')
         apps_found = [@app_dir]
       elsif Liberty.meta_inf(@app_dir)
@@ -219,7 +219,7 @@ module LibertyBuildpack::Container
         server_xml_doc = File.open(server_xml, 'r') { |file| REXML::Document.new(file) }
         application = REXML::XPath.match(server_xml_doc, '/server/application')[0]
 
-        if Liberty.application_mf(@app_dir)
+        if Liberty.app_mf(@app_dir)
           featureManager = REXML::XPath.match(server_xml_doc, '/server/featureManager')[0]
          feature = Element.new('feature')
           feature.add_text('wab-1.0')
@@ -267,7 +267,7 @@ module LibertyBuildpack::Container
         candidates = Dir[File.join(@app_dir, 'wlp', 'usr', 'servers', '*')]
         raise "Incorrect number of servers to deploy (expecting exactly one): #{candidates}" if candidates.size != 1
         File.basename(candidates[0])
-      elsif Liberty.server_directory(@app_dir) || Liberty.web_inf(@app_dir) || Liberty.application_mf(@app_dir) || Liberty.meta_inf(@app_dir)
+      elsif Liberty.server_directory(@app_dir) || Liberty.web_inf(@app_dir) || Liberty.app_mf(@app_dir) || Liberty.meta_inf(@app_dir)
         return 'defaultServer'
       else
         raise 'Could not find either a WEB-INF directory or a server.xml.'
@@ -298,7 +298,7 @@ module LibertyBuildpack::Container
     end
 
     def self.find_liberty(app_dir, configuration)
-      if server_xml(app_dir) || web_inf(app_dir)|| application_mf(app_dir) || meta_inf(app_dir)
+      if server_xml(app_dir) || web_inf(app_dir)|| app_mf(app_dir) || meta_inf(app_dir)
         version, uri, license = LibertyBuildpack::Repository::ConfiguredItem.find_item(configuration) do |candidate_version|
           fail "Malformed Liberty version #{candidate_version}: too many version components" if candidate_version[4]
         end
@@ -374,9 +374,10 @@ module LibertyBuildpack::Container
       File.directory?(File.join(app_dir, META_INF)) ? meta_inf : nil
     end
 
-    def self.application_mf(app_dir)
-      application_mf = File.join(app_dir, META_INF, APPLICATION_MF)
-      File.file?(File.join(app_dir, META_INF, APPLICATION_MF)) ? application_mf : nil
+    def self.app_mf(app_dir)
+      app_mf = File.join(app_dir, META_INF, APPLICATION_MF)
+      LibertyBuildpack::Diagnostics::LoggerFactory.get_logger.info("#{app_mf}")
+      File.file?(File.join(app_dir, META_INF, APPLICATION_MF)) ? app_mf : nil
     end
 
     def self.server_directory(server_dir)
