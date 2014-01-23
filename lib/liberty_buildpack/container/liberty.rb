@@ -93,12 +93,10 @@ module LibertyBuildpack::Container
         print "\nYou have not accepted the IBM Liberty License.\n\nVisit the following uri:\n#{@liberty_license}\n\nExtract the license number (D/N:) and place it inside your manifest file as a ENV property e.g. \nENV: \n  IBM_LIBERTY_LICENSE: {License Number}.\n"
         raise
       end
-      @logger.info("#{system("ls -l #{@app_dir}/**")}")
       jvm_options
       download_liberty
       update_server_xml
       link_application
-      @logger.info("#{system("ls -l #{File.join(@app_dir, 'wlp', 'usr')}/**")}")
       make_server_script_runnable
       # Need to do minify here to have server_xml updated and applications and libs linked.
       minify_liberty if minify?
@@ -142,22 +140,18 @@ module LibertyBuildpack::Container
           file.puts('<server></server>')
         end
 
-        @logger.info("Run minify script #{system("ls -l #{liberty_home}/bin/**")}")
         minified_zip = File.join(root, 'minified.zip')
         minify_script_string = "JAVA_HOME=\"#{@app_dir}/#{@java_home}\" #{File.join(liberty_home, 'bin', 'server')} package #{server_name} --include=minify --archive=#{minified_zip} --os=-z/OS"
         # Make it quiet unless there're errors (redirect only stdout)
         minify_script_string << ContainerUtils.space('1>/dev/null')
 
         system(minify_script_string)
-        @logger.info("The size of the minified zip is #{File.size? minified_zip}")
 
         # Update with minified version only if the generated file exists and not empty.
         if File.size? minified_zip
           system("unzip -qq -d #{root} #{minified_zip}")
           system("rm -rf #{liberty_home}/lib && mv #{root}/wlp/lib #{liberty_home}/lib")
           system("rm -rf #{root}/wlp")
-          @logger.info("#{system("ls -l #{liberty_home}/**")}")
-          @logger.info("#{Dir.glob("#{root}/wlp/**/")}")
           # Re-create sym-links for application and libraries.
           make_server_script_runnable
           puts 'Using minified liberty.'
