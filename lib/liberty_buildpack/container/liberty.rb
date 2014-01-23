@@ -64,7 +64,7 @@ module LibertyBuildpack::Container
     def apps
       apps_found = []
       server_xml = Liberty.server_xml(@app_dir)
-      @logger.info("Contents of Directory #{Dir.glob("#{@app_dir}/**")}")
+      @logger.info("Contents of Directory #{Dir.glob("#{@app_dir}/META-INF/**")}")
       @logger.info("#{Liberty.app_mf(@app_dir)}")
       if Liberty.web_inf(@app_dir)
         apps_found = [@app_dir]
