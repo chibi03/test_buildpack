@@ -64,6 +64,7 @@ module LibertyBuildpack::Container
     def apps
       apps_found = []
       server_xml = Liberty.server_xml(@app_dir)
+      @logger.info("Contents of Directory #{Dir.glob("#{@app_dir}/**")}")
       if Liberty.web_inf(@app_dir)
         apps_found = [@app_dir]
       elsif Liberty.application_mf(@app_dir)
@@ -373,8 +374,8 @@ module LibertyBuildpack::Container
     end
 
     def self.application_mf(app_dir)
-      app_mf = File.join(meta_inf(app_dir), APPLICATION_MF)
-      File.file?(File.join(meta_inf(app_dir), APPLICATION_MF)) ? app_mf : nil
+      application_mf = File.join(app_dir, META_INF, APPLICATION_MF)
+      File.directory?(File.join(app_dir, META_INF, APPLICATION_MF)) ? application_mf : nil
     end
 
     def self.server_directory(server_dir)
