@@ -37,7 +37,7 @@ module LibertyBuildpack::Container
     def initialize(context)
       @logger = LibertyBuildpack::Diagnostics::LoggerFactory.get_logger
       @app_dir = context[:app_dir]
-      prep_app(@app_dir)
+      # prep_app(@app_dir)
       @java_home = context[:java_home]
       @java_opts = context[:java_opts]
       @lib_directory = context[:lib_directory]
@@ -51,12 +51,12 @@ module LibertyBuildpack::Container
     end
 
     # Extracts archives that are pushed initially
-    def prep_app(app_dir)
-      ['*.zip', '*.ear', '*.eba'].each do |archive|
-        app = Liberty.contains_type(app_dir, archive)
-        Liberty.splat_expand(app) if app
-      end
-    end
+   # def prep_app(app_dir)
+      # ['*.zip', '*.ear', '*.eba'].each do |archive|
+        # app = Liberty.contains_type(app_dir, archive)
+        # Liberty.splat_expand(app) if app
+      # end
+   # end
 
     # Get a list of web applications that are in the server directory
     #
